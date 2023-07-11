@@ -13,6 +13,10 @@ RUN apt update && \
 		ipmitool \
 		&& \
 	apt clean
-RUN pip install ironic pymysql
+RUN pip install "flask<2.3"
+RUN pip install \
+	pymysql \
+	ironic \
+	ironic-inspector
 RUN mkdir /tftpboot
 COPY xinetd.d/tftp /etc/xinetd.d/tftp

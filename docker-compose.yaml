@@ -1,0 +1,69 @@
+x-common:
+  environment: &env
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+
+services:
+  db:
+    image: docker.io/mariadb:10
+    environment:
+      <<: *env
+      MYSQL_PWD: ${MARIADB_ROOT_PASSWORD}
+    healthcheck:
+      test: ["CMD", "mysql", "-u", "root", "mysql", "-e", "select 1"]
+      start_period: 30s
+      interval: 10s
+      timeout: 5s
+    volumes:
+      - mariadb_data:/var/lib/mysql
+  ironic:
+    depends_on:
+      db:
+        condition: service_healthy
+    image: ironic
+    build:
+      context: .
+    ports:
+      - 6385:6385
+    environment:
+      <<: *env
+    volumes:
+      - ironic_config:/config
+      - tftpboot:/tftpboot
+      - ./scripts:/scripts
+    entrypoint:
+      - bash
+      - /scripts/setup-ironic.sh
+    command:
+      - ironic
+      - --config-file
+      - /config/ironic.conf
+  tftp:
+    depends_on:
+      ironic:
+        condition: service_started
+    image: ironic
+    build:
+      context: .
+    environment:
+      <<: *env
+    volumes:
+      - ironic_config:/config
+      - tftpboot:/tftpboot
+      - ./scripts:/scripts
+    entrypoint:
+      - bash
+      - /scripts/setup-tftp.sh
+    command:
+      - xinetd
+      - -stayalive
+      - -dontfork
+      - -filelog
+      - /dev/stdout
+
+volumes:
+  tftpboot:
+  ironic_config:
+  mariadb_data:

@@ -40,6 +40,23 @@ services:
       - ironic
       - --config-file
       - /config/ironic.conf
+  ironic-inspector:
+    depends_on:
+      db:
+        condition: service_healthy
+    image: ironic
+    build:
+      context: .
+    environment:
+      <<: *env
+    volumes:
+      - ironic_config:/config
+      - tftpboot:/tftpboot
+      - ./scripts:/scripts
+    command:
+      - ironic-inspector
+      - --config-file
+      - /config/ironic.conf
   tftp:
     depends_on:
       ironic:
